@@ -1,0 +1,5 @@
+genome_fasta: data/CEN6_ver_220406.fasta
+samples:
+   input: data/input.fastqsanger.gz
+   chip: data/chip.fastqsanger.gz
+output_dir: output

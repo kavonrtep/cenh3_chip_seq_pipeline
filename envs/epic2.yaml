@@ -1,0 +1,6 @@
+name: bowtie2
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - epic2=0.0.52
