@@ -54,7 +54,7 @@ rule bowtie2_align:
     threads: workflow.cores * 1
     shell:
         """
-        bowtie2 -p {threads} --very-fast -x {input.genome} -U {input.fastq} | samtools view -Sb - > {output.bam}
+        bowtie2 -p {threads} -x {input.genome} -U {input.fastq} | samtools view -Sb - > {output.bam}
         """
 
 rule bowtie2_sort:
