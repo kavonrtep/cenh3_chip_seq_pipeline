@@ -11,6 +11,8 @@ conda install -c conda-forge singularity
 ```
 
 ## Quick Start
+Singularity image (.sif file) can be downloaded from https://github.com/kavonrtep/cenh3_chip_seq_pipeline/releases 
+
 
 Input files for the pipeline are provided in `config.yaml` file. The file contains the following fields:
 
@@ -21,6 +23,7 @@ samples:
    chip: /path/to/chip.fastq.gz
 output_dir: /path/to/output
 ```
+
 
 Input and ChIP could be `fastq` or `fastq.gz` files. To run the pipeline, execute the following command:
 
@@ -47,6 +50,48 @@ singularity run -B /mnt/data/genomes \
 Or you can use the following command to bind the whole directory `/mnt/data` to the container
 ```bash
 singularity run -B /mnt/data -B $PWD chipseq_pipeline.sif -c config.yaml -t 20
+```
+
+
+# Output structure
+The pipeline will create the following files and folders in the output directory:
+
+```bash
+output/
+├── epic2
+│   ├── epic2_all.bs2000.csv
+│   ├── epic2_all.default.csv
+│   ├── epic2_unique.bs2000.csv
+│   └── epic2_unique.default.csv
+├── macs3
+│   ├── macs3_all_peaks.broadPeak
+│   ├── macs3_all_peaks.gappedPeak
+│   ├── macs3_all_peaks.xls
+│   ├── macs3_unique_peaks.broadPeak
+│   ├── macs3_unique_peaks.gappedPeak
+│   └── macs3_unique_peaks.xls
+├── mapped_reads
+│   ├── chip.all.bam
+│   ├── chip.all.sorted.bam
+│   ├── chip.all.sorted.bam.csi
+│   ├── chip.unique.sorted.bam
+│   ├── chip.unique.sorted.bam.csi
+│   ├── input.all.bam
+│   ├── input.all.sorted.bam
+│   ├── input.all.sorted.bam.csi
+│   ├── input.unique.sorted.bam
+│   └── input.unique.sorted.bam.csi
+├── chip_vs_input_all.bs2000.bw     # output from bamCompare, bin witdh 2000bp
+├── chip_vs_input_all.bs200.bw      # output from bamCompare, bin witdh 200bp
+├── chip_vs_input_unique.bs2000.bw  # output from bamCompare on uniquely mapped reads, bin with 2000bp
+├── chip_vs_input_unique.bs200.bw   # output from bamCompare on uniquely mapped reads, bin with 200bp
+├── epic2_all.bs2000.bedgraph       # output from epic2, bin width 2000bp
+├── epic2_all.default.bedgraph      # output from epic2, default bin width (200bp)
+├── epic2_unique.bs2000.bedgraph    # output from epic2 on uniquely mapped reads, bin width 2000bp
+├── epic2_unique.default.bedgraph   # output from epic2 on uniquely mapped reads, default bin width (200bp)
+├── macs3_all_peaks.bedgraph        # output from macs3, broadPeaks as bedgraph
+└── macs3_unique_peaks.bedgraph     # output from macs3 on uniquely mapped reads, broadPeaks as bedgraph
+
 ```
 
 
