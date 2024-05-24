@@ -58,19 +58,19 @@ The pipeline will create the following files and folders in the output directory
 
 ```bash
 output/
-├── epic2
+├── epic2/
 │   ├── epic2_all.bs2000.csv
 │   ├── epic2_all.default.csv
 │   ├── epic2_unique.bs2000.csv
 │   └── epic2_unique.default.csv
-├── macs3
+├── macs3/
 │   ├── macs3_all_peaks.broadPeak
 │   ├── macs3_all_peaks.gappedPeak
 │   ├── macs3_all_peaks.xls
 │   ├── macs3_unique_peaks.broadPeak
 │   ├── macs3_unique_peaks.gappedPeak
 │   └── macs3_unique_peaks.xls
-├── mapped_reads
+├── mapped_reads/
 │   ├── chip.all.bam
 │   ├── chip.all.sorted.bam
 │   ├── chip.all.sorted.bam.csi
