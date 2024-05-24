@@ -9,15 +9,28 @@ create_dirs(config["output_dir"], f"{config['output_dir']}/mapped_reads",
                f"{config['output_dir']}/epic2", f"{config['output_dir']}/macs3"
     )
 
+# list output dir to see if subdirectories are created
+print(os.listdir(config["output_dir"]))
+
+
+
 
 rule all:
     input:
-        f"{config['output_dir']}/epic2_default.bedgraph",
-        f"{config['output_dir']}/epic2_bs2000.bedgraph",
-        f"{config['output_dir']}/chip_vs_input_bs200.bw",
-        f"{config['output_dir']}/chip_vs_input_bs2000.bw",
-        f"{config['output_dir']}/macs3/macs3_peaks.broadPeak",
-        f"{config['output_dir']}/macs3_peaks.bedgraph"
+        f"{config['output_dir']}/epic2_all.default.bedgraph",
+        f"{config['output_dir']}/epic2_all.bs2000.bedgraph",
+        f"{config['output_dir']}/epic2_unique.default.bedgraph",
+        f"{config['output_dir']}/epic2_unique.bs2000.bedgraph",
+        f"{config['output_dir']}/chip_vs_input_all.bs200.bw",
+        f"{config['output_dir']}/chip_vs_input_all.bs2000.bw",
+        f"{config['output_dir']}/chip_vs_input_unique.bs200.bw",
+        f"{config['output_dir']}/chip_vs_input_unique.bs2000.bw",
+        f"{config['output_dir']}/macs3/macs3_all_peaks.broadPeak",
+        f"{config['output_dir']}/macs3_all_peaks.bedgraph",
+        f"{config['output_dir']}/macs3/macs3_unique_peaks.broadPeak",
+        f"{config['output_dir']}/macs3_unique_peaks.bedgraph"
+
+
 
 rule bowtie2_build:
     input:
@@ -36,19 +49,19 @@ rule bowtie2_align:
         fastq=lambda wildcards: config["samples"][wildcards.sample],
         genome=config["genome_fasta"]
     output:
-        bam="{output_dir}/mapped_reads/{sample}.bam"
+        bam="{output_dir}/mapped_reads/{sample}.all.bam"
     conda: "envs/bowtie2.yaml"
-    threads: workflow.cores * 0.8
+    threads: workflow.cores * 1
     shell:
         """
-        bowtie2 -p {threads}  -x {input.genome} -U {input.fastq} | samtools view -Sb - > {output.bam}
+        bowtie2 -p {threads} --very-fast -x {input.genome} -U {input.fastq} | samtools view -Sb - > {output.bam}
         """
 
 rule bowtie2_sort:
     input:
-        "{output_dir}/mapped_reads/{sample}.bam"
+        "{output_dir}/mapped_reads/{sample}.all.bam"
     output:
-        "{output_dir}/mapped_reads/{sample}.sorted.bam"
+        "{output_dir}/mapped_reads/{sample}.all.sorted.bam"
     conda: "envs/bowtie2.yaml"
     shell:
         """
@@ -56,16 +69,22 @@ rule bowtie2_sort:
         """
 
 rule bowtie2_index:
+    # make index of all sorted bam files
     input:
-        "{output_dir}/mapped_reads/{sample}.sorted.bam"
+        "{output_dir}/mapped_reads/{sample}.all.sorted.bam",
+        "{output_dir}/mapped_reads/{sample}.unique.sorted.bam"
     output:
-        "{output_dir}/mapped_reads/{sample}.sorted.bam.csi"
+        "{output_dir}/mapped_reads/{sample}.all.sorted.bam.csi",
+        "{output_dir}/mapped_reads/{sample}.unique.sorted.bam.csi"
 
     conda: "envs/bowtie2.yaml"
     shell:
         """
-        samtools index {input} -c 2> log.txt
+        samtools index {input[0]} -c 
+        samtools index {input[1]} -c 
         """
+
+
 rule make_genome_index:
     input:
         config["genome_fasta"]
@@ -87,6 +106,23 @@ rule make_chromsizes:
         """
 
 
+rule get_unique_mapped_bam:
+    input:
+        input=f"{config['output_dir']}/mapped_reads/input.all.sorted.bam",
+        chip=f"{config['output_dir']}/mapped_reads/chip.all.sorted.bam"
+    output:
+        input=f"{config['output_dir']}/mapped_reads/input.unique.sorted.bam",
+        chip=f"{config['output_dir']}/mapped_reads/chip.unique.sorted.bam"
+    conda: "envs/sambamba.yaml"
+    threads: workflow.cores * 0.8
+
+    shell:
+        """
+        sambamba view -t {threads} -f bam -h -F "[XS] == null and not unmapped  and not duplicate" {input.input} > {output.input}
+        sambamba view -t {threads} -f bam -h -F "[XS] == null and not unmapped  and not duplicate" {input.chip} > {output.chip}
+        """
+
+
 rule get_genome_size:
     input:
         config["genome_fasta"] + ".chromsizes"
@@ -99,72 +135,131 @@ rule get_genome_size:
 
 rule run_epic2:
     input:
-        input_bam="{output_dir}/mapped_reads/input.sorted.bam",
-        input_csi="{output_dir}/mapped_reads/input.sorted.bam.csi",
-        chip_bam="{output_dir}/mapped_reads/chip.sorted.bam",
-        chip_csi="{output_dir}/mapped_reads/chip.sorted.bam.csi",
+        input_bam="{output_dir}/mapped_reads/input.all.sorted.bam",
+        input_csi="{output_dir}/mapped_reads/input.all.sorted.bam.csi",
+        chip_bam="{output_dir}/mapped_reads/chip.all.sorted.bam",
+        chip_csi="{output_dir}/mapped_reads/chip.all.sorted.bam.csi",
         chromsizes=config["genome_fasta"] + ".chromsizes"
 
     output:
-        epic2_default="{output_dir}/epic2/epic2_default.csv",
-        epic2_bs2000="{output_dir}/epic2/epic2_bs2000.csv"
-    log:
-        "{output_dir}/epic2.log"
+        epic2_default="{output_dir}/epic2/epic2_all.default.csv",
+        epic2_bs2000="{output_dir}/epic2/epic2_all.bs2000.csv"
     conda: "envs/epic2.yaml"
     shell:
         """
-        epic2 -t {input.chip_bam} -c {input.input_bam} -cs {input.chromsizes} > {output.epic2_default} 2>>{log}
-        epic2 -t {input.chip_bam} -c {input.input_bam} -cs {input.chromsizes} -bin 2000 > {output.epic2_bs2000} 2>> {log}
+        epic2 -t {input.chip_bam} -c {input.input_bam} -cs {input.chromsizes} > {output.epic2_default} 
+        epic2 -t {input.chip_bam} -c {input.input_bam} -cs {input.chromsizes} -bin 2000 > {output.epic2_bs2000}
         """
+
+rule run_epic2_on_unique:
+    input:
+        input_bam="{output_dir}/mapped_reads/input.unique.sorted.bam",
+        input_csi="{output_dir}/mapped_reads/input.unique.sorted.bam.csi",
+        chip_bam="{output_dir}/mapped_reads/chip.unique.sorted.bam",
+        chip_csi="{output_dir}/mapped_reads/chip.unique.sorted.bam.csi",
+        chromsizes=config["genome_fasta"] + ".chromsizes"
+
+    output:
+        epic2_default="{output_dir}/epic2/epic2_unique.default.csv",
+        epic2_bs2000="{output_dir}/epic2/epic2_unique.bs2000.csv"
+    conda: "envs/epic2.yaml"
+    shell:
+        """
+        epic2 -t {input.chip_bam} -c {input.input_bam} -cs {input.chromsizes} > {output.epic2_default}
+        epic2 -t {input.chip_bam} -c {input.input_bam} -cs {input.chromsizes} -bin 2000 > {output.epic2_bs2000}
+        """
+
+
 rule epic2csv_to_bedgraph:
     input:
-        csv1="{output_dir}/epic2/epic2_default.csv",
-        csv2="{output_dir}/epic2/epic2_bs2000.csv"
+        csv1="{output_dir}/epic2/epic2_all.default.csv",
+        csv2="{output_dir}/epic2/epic2_all.bs2000.csv",
+        csv3="{output_dir}/epic2/epic2_unique.default.csv",
+        csv4="{output_dir}/epic2/epic2_unique.bs2000.csv"
     output:
-        bedgraph1="{output_dir}/epic2_default.bedgraph",
-        bedgraph2="{output_dir}/epic2_bs2000.bedgraph"
+        bedgraph1="{output_dir}/epic2_all.default.bedgraph",
+        bedgraph2="{output_dir}/epic2_all.bs2000.bedgraph",
+        bedgraph3="{output_dir}/epic2_unique.default.bedgraph",
+        bedgraph4="{output_dir}/epic2_unique.bs2000.bedgraph"
     shell:
         """
         cut -f 1-3,10 {input.csv1} > {output.bedgraph1}
         cut -f 1-3,10 {input.csv2} > {output.bedgraph2}
+        cut -f 1-3,10 {input.csv3} > {output.bedgraph3}
+        cut -f 1-3,10 {input.csv4} > {output.bedgraph4}
         """
 
 
 rule bamCompare:
     input:
-        input=config["output_dir"] + "/mapped_reads/input.sorted.bam",
-        input_csi=config["output_dir"] + "/mapped_reads/input.sorted.bam.csi",
-        chip=config["output_dir"] + "/mapped_reads/chip.sorted.bam",
-        chip_csi=config["output_dir"] + "/mapped_reads/chip.sorted.bam.csi"
+        input=config["output_dir"] + "/mapped_reads/input.all.sorted.bam",
+        input_csi=config["output_dir"] + "/mapped_reads/input.all.sorted.bam.csi",
+        chip=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam",
+        chip_csi=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam.csi"
     output:
-        bw200=config["output_dir"] + "/chip_vs_input_bs200.bw",
-        bw2000=config["output_dir"] + "/chip_vs_input_bs2000.bw"
-    log:
-        config["output_dir"] + "/bamCompare.log"
+        bw200=config["output_dir"] + "/chip_vs_input_all.bs200.bw",
+        bw2000=config["output_dir"] + "/chip_vs_input_all.bs2000.bw"
+
     conda: "envs/deeptools.yaml"
     shell:
         """
-        bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw200} --binSize 200 2>>{log}
-        bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw2000} --binSize 2000 2>>{log}
+        bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw200} --binSize 200 
+        bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw2000} --binSize 2000 
         """
-rule macs3:
+
+rule bamCompare_on_unique:
     input:
-        chip=config["output_dir"] + "/mapped_reads/chip.sorted.bam",
-        chip_csi=config["output_dir"] + "/mapped_reads/chip.sorted.bam.csi",
-        input=config["output_dir"] + "/mapped_reads/input.sorted.bam",
-        input_csi=config["output_dir"] + "/mapped_reads/input.sorted.bam.csi",
-        genome_size=config["genome_fasta"] + ".size"
+        input=config["output_dir"] + "/mapped_reads/input.unique.sorted.bam",
+        input_csi=config["output_dir"] + "/mapped_reads/input.unique.sorted.bam.csi",
+        chip=config["output_dir"] + "/mapped_reads/chip.unique.sorted.bam",
+        chip_csi=config["output_dir"] + "/mapped_reads/chip.unique.sorted.bam.csi"
     output:
-        dir=directory(config["output_dir"] + "/macs3"),
-        macs3_peaks=config["output_dir"] + "/macs3/macs3_peaks.broadPeak",
-        macs3_bedgraph=config["output_dir"] + "/macs3_peaks.bedgraph"
-    conda: "envs/macs3.yaml"
-    log:
-        config["output_dir"] + "/macs3.log"
+        bw200=config["output_dir"] + "/chip_vs_input_unique.bs200.bw",
+        bw2000=config["output_dir"] + "/chip_vs_input_unique.bs2000.bw"
+    conda: "envs/deeptools.yaml"
     shell:
         """
+        bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw200} --binSize 200 
+        bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw2000} --binSize 2000
+        """
+
+
+rule macs3:
+    input:
+        chip=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam",
+        chip_csi=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam.csi",
+        input=config["output_dir"] + "/mapped_reads/input.all.sorted.bam",
+        input_csi=config["output_dir"] + "/mapped_reads/input.all.sorted.bam.csi",
+        genome_size=config["genome_fasta"] + ".size"
+    output:
+        macs3_peaks=config["output_dir"] + "/macs3/macs3_all_peaks.broadPeak",
+        macs3_bedgraph=config["output_dir"] + "/macs3_all_peaks.bedgraph"
+    conda: "envs/macs3.yaml"
+    shell:
+        """
+        macs3_dir=$(dirname {output.macs3_peaks})
         GS=$(cat {input.genome_size})
-        macs3 callpeak -t {input.chip} -c {input.input} -f BAM -g $GS -n macs3 --outdir {output.dir} --broad --nomodel --extsize 200 2>> {log}
+        macs3 callpeak -t {input.chip} -c {input.input} -f BAM -g $GS -n macs3_all --outdir $macs3_dir --broad --nomodel --extsize 200
         # make bedgraph
-        cut -f 1-3,7 {output.dir}/macs3_peaks.broadPeak > {output.macs3_bedgraph}
+        cut -f 1-3,7 {output.macs3_peaks} > {output.macs3_bedgraph}
+        """
+
+rule macs3_on_unique:
+    input:
+        chip=config["output_dir"] + "/mapped_reads/chip.unique.sorted.bam",
+        chip_csi=config["output_dir"] + "/mapped_reads/chip.unique.sorted.bam.csi",
+        input=config["output_dir"] + "/mapped_reads/input.unique.sorted.bam",
+        input_csi=config["output_dir"] + "/mapped_reads/input.unique.sorted.bam.csi",
+        genome_size=config["genome_fasta"] + ".size",
+    output:
+        macs3_peaks=config["output_dir"] + "/macs3/macs3_unique_peaks.broadPeak",
+        macs3_bedgraph=config["output_dir"] + "/macs3_unique_peaks.bedgraph"
+    conda: "envs/macs3.yaml"
+    shell:
+        """
+        macs3_dir=$(dirname {output.macs3_peaks})
+        GS=$(cat {input.genome_size})
+        macs3 callpeak -t {input.chip} -c {input.input} -f BAM -g $GS -n macs3_unique --outdir $macs3_dir --broad --nomodel --extsize 200
+        # make bedgraph
+        cut -f 1-3,7 {output.macs3_peaks} > {output.macs3_bedgraph}
         """

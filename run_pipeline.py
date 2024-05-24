@@ -102,9 +102,9 @@ config.yaml file. """,
 
     cmd = (F"snakemake --snakefile {script_dir}/Snakefile --configfile {args.config} "
            F"--cores {args.threads} --use-conda --conda-prefix {CONDA_ENVS_PATH} "
-           F"--conda-frontend mamba")
-    print(cache_dir)
-    # append cache dir to othe environment variables
+           F"--conda-frontend mamba --show-failed-logs")
+
+    # append cache dir to other environment variables
     env = os.environ.copy()
     env['XDG_CACHE_HOME'] = cache_dir
     subprocess.check_call(cmd, shell=True, env=env)

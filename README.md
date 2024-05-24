@@ -1,10 +1,10 @@
 # CHIP seq analysis pipeline
 
 
-This pipeline is designed to analyze ChIP-seq data using a series of tools like epic2, Macs3 and deeptools. The pipeline is designed for detection of broad peaks. The pipeline is encapsulated in a Singularity container for ease of use and reproducibility.
+This pipeline is designed to analyze ChIP-seq data using a series of tools like epic2, Macs3 and deeptools. The pipeline is intended to be used for detection of broad peaks. The pipeline is encapsulated in a Singularity container.
 
 ## Requirements 
-Singularity is required to use the contained. Sigularity can be installed using conda environment. 
+Singularity is required to use the contained. Singularity can be installed using conda environment. 
 
 ```bash
 conda install -c conda-forge singularity
