@@ -36,16 +36,31 @@ rule bowtie2_build:
     input:
         config["genome_fasta"]
     output:
-        expand("{genome}.{ext}", genome=config["genome_fasta"], ext=["1.bt2", "2.bt2", "3.bt2", "4.bt2", "rev.1.bt2", "rev.2.bt2"])
+        config["genome_fasta"] + ".bowtie2_index_check"
     conda: "envs/bowtie2.yaml"
     shell:
         """
-        bowtie2-build {input} {input}
+        # check if {input}.bt2 OR {input}.bt2l files exists (one is enough)
+        # if not, build index
+        if [ -f {input}.1.bt2 ] || [ -f {input}.1.bt2l ]; then
+            echo "Index already exists"
+            touch {output}
+            exit 0
+        else
+            echo "Building index"
+            bowtie2-build {input} {input}
+            if [ -f {input}.1.bt2 ] || [ -f {input}.1.bt2l ]; then
+                touch {output}
+            else
+                echo "Index building failed"
+                exit 1
+            fi
+        fi
         """
 
 rule bowtie2_align:
     input:
-        fasta=expand("{genome}.{ext}",genome=config["genome_fasta"],ext=["1.bt2"]),
+        bowtie2_index_check=config["genome_fasta"] + ".bowtie2_index_check",
         fastq=lambda wildcards: config["samples"][wildcards.sample],
         genome=config["genome_fasta"]
     output:

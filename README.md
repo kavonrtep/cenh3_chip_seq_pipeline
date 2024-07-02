@@ -7,7 +7,8 @@ This pipeline is designed to analyze ChIP-seq data using a series of tools like 
 Singularity is required to use the container. Singularity can be installed using conda environment. 
 
 ```bash
-conda install -c conda-forge singularity
+conda create -n singularity3 -c conda-forge "singularity>=3.6"
+conda activate singularity3
 ```
 
 ## Quick Start
