@@ -28,7 +28,9 @@ rule all:
         f"{config['output_dir']}/macs3/macs3_all_peaks.broadPeak",
         f"{config['output_dir']}/macs3_all_peaks.bedgraph",
         f"{config['output_dir']}/macs3/macs3_unique_peaks.broadPeak",
-        f"{config['output_dir']}/macs3_unique_peaks.bedgraph"
+        f"{config['output_dir']}/macs3_unique_peaks.bedgraph",
+        f"{config['output_dir']}/input_coverage_bs2000.bw",
+        f"{config['output_dir']}/chip_coverage_bs2000.bw",
 
 
 
@@ -236,6 +238,23 @@ rule bamCompare_on_unique:
         """
         bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw200} --binSize 200 
         bamCompare -b1 {input.chip} -b2 {input.input} -o {output.bw2000} --binSize 2000
+        """
+
+rule bamCoverage:
+    input:
+        input=config["output_dir"] + "/mapped_reads/input.all.sorted.bam",
+        input_csi=config["output_dir"] + "/mapped_reads/input.all.sorted.bam.csi",
+        chip=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam",
+        chip_csi=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam.csi"
+    output:
+        input_bw2000=config["output_dir"] + "/input_coverage_bs2000.bw",
+        chip_bw2000=config["output_dir"] + "/chip_coverage_bs2000.bw"
+    conda: "envs/deeptools.yaml"
+    threads: workflow.cores
+    shell:
+        """
+        bamCoverage -b {input.input} -o {output.input_bw2000} --binSize 2000 -p {threads} 
+        bamCoverage -b {input.chip} -o {output.chip_bw2000} --binSize 2000 -p {threads}
         """
 
 
