@@ -6,7 +6,8 @@ def create_dirs(*dirs):
         if not os.path.exists(d):
             os.makedirs(d)
 create_dirs(config["output_dir"], f"{config['output_dir']}/mapped_reads",
-               f"{config['output_dir']}/epic2", f"{config['output_dir']}/macs3"
+               f"{config['output_dir']}/epic2", f"{config['output_dir']}/macs3",
+                f"{config['output_dir']}/peakBeast"
     )
 
 # list output dir to see if subdirectories are created
@@ -31,6 +32,8 @@ rule all:
         f"{config['output_dir']}/macs3_unique_peaks.bedgraph",
         f"{config['output_dir']}/input_coverage_bs2000.bw",
         f"{config['output_dir']}/chip_coverage_bs2000.bw",
+        f"{config['output_dir']}/peakBeast/peakBeast_10k_norm.bw",
+        f"{config['output_dir']}/summary_plot.png"
 
 
 
@@ -296,4 +299,58 @@ rule macs3_on_unique:
         macs3 callpeak -t {input.chip} -c {input.input} -f BAM -g $GS -n macs3_unique --outdir $macs3_dir --broad --nomodel --extsize 200
         # make bedgraph
         cut -f 1-3,7 {output.macs3_peaks} > {output.macs3_bedgraph}
+        """
+
+
+rule peakBeast:
+    input:
+        chip=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam",
+        chip_csi=config["output_dir"] + "/mapped_reads/chip.all.sorted.bam.csi",
+        input=config["output_dir"] + "/mapped_reads/input.all.sorted.bam",
+        input_csi=config["output_dir"] + "/mapped_reads/input.all.sorted.bam.csi"
+    output:
+        bwn = config["output_dir"] + "/peakBeast/peakBeast_10k_norm.bw"
+    params:
+        prefix = config["output_dir"] + "/peakBeast/peakBeast",
+        basedir = workflow.current_basedir
+    conda: "envs/peakBeast.yaml"
+    threads: workflow.cores
+    shell:
+        """
+        # get absolute path of scripts directory
+        scripts_dir={params.basedir}/scripts
+        echo "scripts dir: $scripts_dir"
+        echo "---------------------------------"
+        export PATH=$scripts_dir:$PATH
+        peakBeast.R --input {input.input} --chip {input.chip} --prefix {params.prefix} --threads {threads} --normalized_only 
+        """
+
+
+rule plot_summary:
+    input:
+        config["output_dir"]+"/chip_coverage_bs2000.bw",
+        config["output_dir"]+"/input_coverage_bs2000.bw",
+        config["output_dir"]+"/chip_vs_input_all.bs2000.bw",
+        config["output_dir"]+"/chip_vs_input_unique.bs2000.bw",
+        config["output_dir"]+"/epic2_all.bs2000.bedgraph",
+        config["output_dir"]+"/epic2_unique.bs2000.bedgraph",
+        config["output_dir"]+"/macs3_all_peaks.bedgraph",
+        config["output_dir"]+"/macs3_unique_peaks.bedgraph",
+        config["output_dir"]+"/peakBeast/peakBeast_10k_norm.bw",
+        chrom_sizes = config["genome_fasta"] + ".chromsizes"
+    output:
+        config["output_dir"]+"/summary_plot.png"
+    params:
+        basedir = workflow.current_basedir,
+        outdir = config["output_dir"]
+    conda: "envs/peakBeast.yaml"
+    threads: 1
+    shell:
+        """
+        # get absolute path of scripts directory
+        scripts_dir={params.basedir}/scripts
+        echo "scripts dir: $scripts_dir"
+        echo "---------------------------------"
+        export PATH=$scripts_dir:$PATH
+        plot_summary.R --dir {params.outdir} --chrom_sizes {input.chrom_sizes} --output {output}
         """
