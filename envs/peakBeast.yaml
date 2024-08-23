@@ -1,0 +1,10 @@
+channels:
+    - r
+    - bioconda
+dependencies:
+    - r-optparse=1.7.3
+    - bioconductor-rtracklayer=1.62.0
+    - bioconductor-edger=4.0.16
+    - bioconductor-rsamtools=2.18.0
+    - bioconductor-csaw=1.36.0
+    - r-rbeast=0.9.9
