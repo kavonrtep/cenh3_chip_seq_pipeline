@@ -45,6 +45,7 @@ From: continuumio/miniconda3
 %files
     envs /opt/pipeline/envs
     Snakefile /opt/pipeline/Snakefile
+    scripts /opt/pipeline/scripts
     config.yaml /opt/pipeline/config.yaml
     run_pipeline.py /opt/pipeline/run_pipeline.py
 
