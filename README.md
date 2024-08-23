@@ -82,6 +82,11 @@ output/
 │   ├── input.all.sorted.bam.csi
 │   ├── input.unique.sorted.bam
 │   └── input.unique.sorted.bam.csi
+├── peakBeast/
+│   ├── peakBeast_10k_norm.bw       # output from peakBest program - enrichment score in 10k windows
+│   ├── peakBeast_2k_norm.bw        # output from peakBest program - enrichment score in 2k windows
+│   └── ...
+├── summary_plot.png                # graphical summary of ChIP-seq analysis
 ├── chip_vs_input_all.bs2000.bw     # output from bamCompare, bin witdh 2000bp
 ├── chip_vs_input_all.bs200.bw      # output from bamCompare, bin witdh 200bp
 ├── chip_vs_input_unique.bs2000.bw  # output from bamCompare on uniquely mapped reads, bin with 2000bp
@@ -102,5 +107,5 @@ To build the container, run the following command:
 
 ```bash
 SINGULARITY=`which singularity`
-sudo $SINGULARITY build chipseq_pipeline_0.1.3.sif Singularity
+sudo $SINGULARITY build chipseq_pipeline_0.2.0.sif Singularity
 ```
