@@ -107,5 +107,5 @@ To build the container, run the following command:
 
 ```bash
 SINGULARITY=`which singularity`
-sudo $SINGULARITY build chipseq_pipeline_0.2.0.sif Singularity
+sudo $SINGULARITY build chipseq_pipeline_0.3.0.sif Singularity
 ```

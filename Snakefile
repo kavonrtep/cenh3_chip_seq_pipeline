@@ -351,7 +351,9 @@ rule plot_summary:
         config["output_dir"]+"/summary_plot.png"
     params:
         basedir = workflow.current_basedir,
-        outdir = config["output_dir"]
+        outdir = config["output_dir"],
+        genome = config["genome_fasta"]
+
     conda: "envs/peakBeast.yaml"
     threads: 1
     shell:
@@ -362,4 +364,8 @@ rule plot_summary:
         echo "---------------------------------"
         export PATH=$scripts_dir:$PATH
         plot_summary.R --dir {params.outdir} --chrom_sizes {input.chrom_sizes} --output {output}
+        # add symbolic link of genome fasta to output dir (if not already there)
+        # get absolute path
+        genome_abs=$(readlink -f {params.genome})
+        ln -sf $genome_abs {params.outdir}/genome.fasta
         """
