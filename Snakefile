@@ -13,6 +13,15 @@ create_dirs(config["output_dir"], f"{config['output_dir']}/mapped_reads",
 # list output dir to see if subdirectories are created
 print(os.listdir(config["output_dir"]))
 
+# add symbolic link of genome fasta to output dir (if not already there)
+# use new name genome.fasta
+if not os.path.exists(f"{config['output_dir']}/genome.fasta"):
+    # use absolute path
+    genome_abs = os.path.abspath(config["genome_fasta"])
+    os.symlink(genome_abs, f"{config['output_dir']}/genome.fasta")
+
+
+
 
 
 
@@ -322,7 +331,7 @@ rule peakBeast:
         echo "scripts dir: $scripts_dir"
         echo "---------------------------------"
         export PATH=$scripts_dir:$PATH
-        peakBeast.R --input {input.input} --chip {input.chip} --prefix {params.prefix} --threads {threads} --normalized_only 
+        peakBeast.R --input {input.input} --chip {input.chip} --prefix {params.prefix} --threads {threads} --normalized_only -S 
         """
 
 
