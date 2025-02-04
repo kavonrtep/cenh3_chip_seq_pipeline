@@ -106,6 +106,7 @@ output/
 To build the container, run the following command:
 
 ```bash
+conda activate singularity
 SINGULARITY=`which singularity`
-sudo $SINGULARITY build chipseq_pipeline_0.3.0.sif Singularity
+sudo $SINGULARITY build images/chipseq_pipeline_0.3.0.sif Singularity
 ```

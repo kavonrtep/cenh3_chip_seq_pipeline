@@ -88,10 +88,17 @@ png(output_path, width = 3000, height = 200 * N_plots, pointsize = 20)
 par(mfrow = c(N_plots + 1, 1), mar = c(0, 4, 0, 1))
 for (i in 1:N_plots){
   print(i)
+  print(selected_fnames_ok[i])
   bw <- import(file.path(dir_path, selected_fnames_ok[i]))
   # recalculate coordinates  - using cumulatve starts
   S <- start(bw) + cum_start[as.vector(seqnames(bw))]
   E <- end(bw) + cum_start[as.vector(seqnames(bw))]
+
+  if (length(bw) == 0){
+    message("No data in ", selected_fnames_ok[i])
+    next
+  }
+
   H <- score(bw)
   color <- plot_colors[selected_fnames_ok[i]]
   if (selected_fnames_ok[i] %in% log_scale){
